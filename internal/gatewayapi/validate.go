@@ -301,6 +301,19 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 		return
 	}
 
+	// Edge case: only one condition which is ResolvedRefs=False, Reason=InvalidCertificateRef or RefNotPermitted.
+	// The listener configuration is semantically valid; the certificate reference is a ResolvedRefs concern, not Accepted.
+	if len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs) &&
+		lConditions[0].Status == metav1.ConditionFalse &&
+		(lConditions[0].Reason == string(gwapiv1.ListenerReasonInvalidCertificateRef) ||
+			lConditions[0].Reason == string(gwapiv1.ListenerReasonRefNotPermitted)) {
+		listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
+			"Listener has been successfully translated")
+		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionFalse, gwapiv1.ListenerReasonInvalid,
+			"Listener is invalid, see other Conditions for details.")
+		return
+	}
+
 	// Any condition on the listener apart from Programmed=true indicates an error.
 	if lConditions[0].Type != string(gwapiv1.ListenerConditionProgrammed) || lConditions[0].Status != metav1.ConditionTrue {
 		hasProgrammedCond := false

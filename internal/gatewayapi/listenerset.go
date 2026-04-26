@@ -113,48 +113,65 @@ func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSe
 		}
 
 		// Calculate status based on listeners
-		allListenersValid := true
-		anyListenerValid := false
+		allListenersAccepted := true
+		anyListenerAccepted := false
+		allListenersProgrammed := true
+		anyListenerProgrammed := false
 
 		for _, lStatus := range ls.Status.Listeners {
 			accepted := false
+			programmed := false
 			for _, cond := range lStatus.Conditions {
 				if cond.Type == string(gwapiv1.ListenerEntryConditionAccepted) && cond.Status == metav1.ConditionTrue {
 					accepted = true
-					break
+				}
+				if cond.Type == string(gwapiv1.ListenerConditionProgrammed) && cond.Status == metav1.ConditionTrue {
+					programmed = true
 				}
 			}
-			anyListenerValid = anyListenerValid || accepted
-			allListenersValid = allListenersValid && accepted
+			anyListenerAccepted = anyListenerAccepted || accepted
+			allListenersAccepted = allListenersAccepted && accepted
+			anyListenerProgrammed = anyListenerProgrammed || programmed
+			allListenersProgrammed = allListenersProgrammed && programmed
 		}
 
 		var (
 			lsAccepted         bool
 			lsReason           gwapiv1.ListenerSetConditionReason
+			lsProgrammed       bool
 			lsProgrammedReason gwapiv1.ListenerSetConditionReason
 			lsMsg              string
 		)
 
 		switch {
-		case allListenersValid:
+		case allListenersAccepted:
 			lsAccepted = true
 			lsReason = gwapiv1.ListenerSetReasonAccepted
-			lsProgrammedReason = gwapiv1.ListenerSetReasonProgrammed
 			lsMsg = "All listeners are valid"
-		case anyListenerValid: // TODO: implement PartiallyInvalid conditions when Gateway API supports it
+		case anyListenerAccepted: // TODO: implement PartiallyInvalid conditions when Gateway API supports it
 			lsAccepted = true
 			lsReason = gwapiv1.ListenerSetReasonListenersNotValid
-			lsProgrammedReason = gwapiv1.ListenerSetReasonProgrammed
 			lsMsg = "Some listeners are invalid"
 		default:
 			lsAccepted = false
 			lsReason = gwapiv1.ListenerSetReasonListenersNotValid
-			lsProgrammedReason = gwapiv1.ListenerSetReasonListenersNotValid
 			lsMsg = "All listeners are invalid"
 		}
 
+		switch {
+		case allListenersProgrammed:
+			lsProgrammed = true
+			lsProgrammedReason = gwapiv1.ListenerSetReasonProgrammed
+		case anyListenerProgrammed:
+			lsProgrammed = true
+			lsProgrammedReason = gwapiv1.ListenerSetReasonProgrammed
+		default:
+			lsProgrammed = false
+			lsProgrammedReason = gwapiv1.ListenerSetReasonListenersNotValid
+		}
+
 		status.UpdateListenerSetStatusAccepted(ls, lsAccepted, lsReason, lsMsg)
-		status.UpdateListenerSetStatusProgrammed(ls, lsAccepted, lsProgrammedReason, lsMsg)
+		status.UpdateListenerSetStatusProgrammed(ls, lsProgrammed, lsProgrammedReason, lsMsg)
 	}
 }
 
