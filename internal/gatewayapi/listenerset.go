@@ -136,27 +136,27 @@ func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSe
 		}
 
 		var (
-			lsAccepted          bool
-			lsReason            gwapiv1.ListenerSetConditionReason
-			lsMsg               string
-			lsProgrammed        bool
-			lsProgrammedReason  gwapiv1.ListenerSetConditionReason
-			lsProgrammedMsg     string
+			lsAccepted         bool
+			lsAcceptedReason   gwapiv1.ListenerSetConditionReason
+			lsAcceptedMsg      string
+			lsProgrammed       bool
+			lsProgrammedReason gwapiv1.ListenerSetConditionReason
+			lsProgrammedMsg    string
 		)
 
 		switch {
 		case allListenersAccepted:
 			lsAccepted = true
-			lsReason = gwapiv1.ListenerSetReasonAccepted
-			lsMsg = "All listeners are accepted"
+			lsAcceptedReason = gwapiv1.ListenerSetReasonAccepted
+			lsAcceptedMsg = "All listeners are accepted"
 		case anyListenerAccepted: // TODO: implement PartiallyInvalid conditions when Gateway API supports it
 			lsAccepted = true
-			lsReason = gwapiv1.ListenerSetReasonListenersNotValid
-			lsMsg = "Some listeners are not accepted"
+			lsAcceptedReason = gwapiv1.ListenerSetReasonListenersNotValid
+			lsAcceptedMsg = "Some listeners are not accepted"
 		default:
 			lsAccepted = false
-			lsReason = gwapiv1.ListenerSetReasonListenersNotValid
-			lsMsg = "No listeners are accepted"
+			lsAcceptedReason = gwapiv1.ListenerSetReasonListenersNotValid
+			lsAcceptedMsg = "No listeners are accepted"
 		}
 
 		switch {
@@ -174,7 +174,7 @@ func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSe
 			lsProgrammedMsg = "No listeners are programmed"
 		}
 
-		status.UpdateListenerSetStatusAccepted(ls, lsAccepted, lsReason, lsMsg)
+		status.UpdateListenerSetStatusAccepted(ls, lsAccepted, lsAcceptedReason, lsAcceptedMsg)
 		status.UpdateListenerSetStatusProgrammed(ls, lsProgrammed, lsProgrammedReason, lsProgrammedMsg)
 	}
 }
