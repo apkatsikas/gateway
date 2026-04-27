@@ -193,7 +193,7 @@ listenerSets:
   status:
     conditions:
     - lastTransitionTime: null
-      message: All listeners are valid
+      message: All listeners are accepted
       reason: Accepted
       status: "True"
       type: Accepted
