@@ -290,20 +290,18 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 		return
 	}
 
-	// When the only condition is a ResolvedRefs failure, the listener is structurally valid —
-	// ResolvedRefs failures reflect unresolvable references, not structural invalidity, so Accepted remains True.
-	// Programmed depends on whether the listener can still serve traffic.
-	if len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs) {
+	var onlyResolvedRefFailure = len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs)
+	if onlyResolvedRefFailure {
 		switch lConditions[0].Reason {
 		case string(status.ListenerReasonPartiallyInvalidCertificateRef):
-			// At least one certificate ref is valid; the listener can still serve traffic using it.
+			// The listener is ready because we program it using only the valid certificates.
 			listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
 				"Listener has been successfully translated")
 			listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
 				"Sending translated listener configuration to the data plane")
 			return
 		case string(gwapiv1.ListenerReasonInvalidCertificateRef), string(gwapiv1.ListenerReasonRefNotPermitted):
-			// Reference is unresolvable; listener cannot serve traffic.
+			// The listener configuration is semantically valid, but the listener cannot serve traffic with an invalid certificate.
 			listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
 				"Listener has been successfully translated")
 			listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionFalse, gwapiv1.ListenerReasonInvalid,
