@@ -328,7 +328,7 @@ listenerSets:
   status:
     conditions:
     - lastTransitionTime: null
-      message: Some listeners are not accepted
+      message: Some listeners are invalid
       reason: ListenersNotValid
       status: "True"
       type: Accepted
