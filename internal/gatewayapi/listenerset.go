@@ -136,11 +136,12 @@ func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSe
 		}
 
 		var (
-			lsAccepted         bool
-			lsReason           gwapiv1.ListenerSetConditionReason
-			lsProgrammed       bool
-			lsProgrammedReason gwapiv1.ListenerSetConditionReason
-			lsMsg              string
+			lsAccepted          bool
+			lsReason            gwapiv1.ListenerSetConditionReason
+			lsMsg               string
+			lsProgrammed        bool
+			lsProgrammedReason  gwapiv1.ListenerSetConditionReason
+			lsProgrammedMsg     string
 		)
 
 		switch {
@@ -162,16 +163,19 @@ func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSe
 		case allListenersProgrammed:
 			lsProgrammed = true
 			lsProgrammedReason = gwapiv1.ListenerSetReasonProgrammed
+			lsProgrammedMsg = "All listeners are programmed"
 		case anyListenerProgrammed:
 			lsProgrammed = true
 			lsProgrammedReason = gwapiv1.ListenerSetReasonProgrammed
+			lsProgrammedMsg = "Some listeners are not programmed"
 		default:
 			lsProgrammed = false
 			lsProgrammedReason = gwapiv1.ListenerSetReasonListenersNotValid
+			lsProgrammedMsg = "No listeners are programmed"
 		}
 
 		status.UpdateListenerSetStatusAccepted(ls, lsAccepted, lsReason, lsMsg)
-		status.UpdateListenerSetStatusProgrammed(ls, lsProgrammed, lsProgrammedReason, lsMsg)
+		status.UpdateListenerSetStatusProgrammed(ls, lsProgrammed, lsProgrammedReason, lsProgrammedMsg)
 	}
 }
 
