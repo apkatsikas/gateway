@@ -68,7 +68,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	clientTrafficPolicies := resources.ClientTrafficPolicies
 	// ClientTrafficPolicies are already sorted by the provider layer
 
+	// policyMap tracks claimed scopes per gateway key: AllSections ("/") or "listenerset/<ns/name>".
+	// Used to detect duplicate whole-scope policies (Conflicted).
 	policyMap := make(map[types.NamespacedName]sets.Set[string])
+	// claimedListeners tracks individual listener names claimed per gateway key.
+	// Used to skip already-translated listeners and to build Overridden status messages.
+	claimedListeners := make(map[types.NamespacedName]sets.Set[string])
 
 	// Build a map out of gateways for faster lookup since users might have hundreds of gateway or more.
 	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
@@ -122,8 +127,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				// Check if another policy targeting the same section exists
 				section := string(*(targetRef.SectionName))
-				s, ok := policyMap[key]
-				if ok && s.Has(section) {
+				if claimedListeners[key].Has(section) {
 					message := fmt.Sprintf("Unable to target section of %s, another ClientTrafficPolicy has already attached to it",
 						string(targetRef.Name))
 
@@ -142,11 +146,11 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					continue
 				}
 
-				// Add section to policy map
-				if s == nil {
-					policyMap[key] = sets.New[string]()
+				// Add section to claimed listeners
+				if claimedListeners[key] == nil {
+					claimedListeners[key] = sets.New[string]()
 				}
-				policyMap[key].Insert(section)
+				claimedListeners[key].Insert(section)
 
 				// Translate for listener matching section name
 				var (
@@ -280,10 +284,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						continue
 					}
 
-					competingPolicy := ok && (s.Len() > 0)
+					competingPolicy := claimedListeners[key] != nil && claimedListeners[key].Len() > 0
 					if competingPolicy {
 						// Maintain order here to ensure status/string does not change with same data
-						sections := s.UnsortedList()
+						sections := claimedListeners[key].UnsortedList()
 						sort.Strings(sections)
 						message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding these sections %v", sections)
 
@@ -314,7 +318,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 							continue
 						}
 						// Skip if section has already been targeted
-						if s != nil && s.Has(string(l.Name)) {
+						if claimedListeners[key].Has(string(l.Name)) {
 							continue
 						}
 
@@ -332,7 +336,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 								errs = errors.Join(errs, err)
 							}
 							if policyTargetsLS {
-								policyMap[key].Insert(string(l.Name))
+								if claimedListeners[key] == nil {
+									claimedListeners[key] = sets.New[string]()
+								}
+								claimedListeners[key].Insert(string(l.Name))
 							}
 						}
 					}
