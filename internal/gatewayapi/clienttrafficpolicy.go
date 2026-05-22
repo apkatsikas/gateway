@@ -218,6 +218,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			for _, currTarget := range targetRefs {
 				if !hasSectionName(&currTarget) {
 
+					if currTarget.Kind != passKind {
+						continue
+					}
+
 					policy, found := handledPolicies[policyName]
 					if !found {
 						policy = policyCopies[i]
@@ -247,9 +251,6 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						continue
 					}
 
-					if currTarget.Kind != passKind {
-						continue
-					}
 					policyTargetsLS := currTarget.Kind == resource.KindListenerSet
 					scopeKey := entireGatewayScope
 					if policyTargetsLS {
