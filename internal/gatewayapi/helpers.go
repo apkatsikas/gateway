@@ -476,6 +476,15 @@ func extractGatewayNameFromListener(listenerName string) string {
 	return listenerName
 }
 
+func extractListenerSetPrefixFromListener(listenerName string) string {
+	parts := strings.Split(listenerName, "/")
+	if len(parts) >= 4 {
+		return fmt.Sprintf("%s/%s/%s/%s", parts[0], parts[1], parts[2], parts[3])
+	}
+	// should never happen
+	return listenerName
+}
+
 func irListenerName(listener *ListenerContext) string {
 	if listener.isFromListenerSet() {
 		return fmt.Sprintf("%s/%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.listenerSet.Namespace, listener.listenerSet.Name, listener.Name)
@@ -651,6 +660,19 @@ func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv
 		Kind:        KindPtr(resource.KindGateway),
 		Namespace:   NamespacePtr(gatewayNN.Namespace),
 		Name:        gwapiv1.ObjectName(gatewayNN.Name),
+		SectionName: sectionName,
+	}
+}
+
+// getAncestorRefForListenerSetPolicy returns a ListenerSet as an ancestor reference for policy.
+// Used when a policy directly targets a ListenerSet, since the ListenerSet is the relevant
+// ancestor at which acceptance status meaningfully differs.
+func getAncestorRefForListenerSetPolicy(lsNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1.ParentReference {
+	return gwapiv1.ParentReference{
+		Group:       GroupPtr(gwapiv1.GroupName),
+		Kind:        KindPtr(resource.KindListenerSet),
+		Namespace:   NamespacePtr(lsNN.Namespace),
+		Name:        gwapiv1.ObjectName(lsNN.Name),
 		SectionName: sectionName,
 	}
 }
